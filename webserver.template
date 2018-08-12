@@ -1,0 +1,95 @@
+{
+    "Outputs": {
+        "InstanceAccess": {
+            "Description": "Command to use to access the instance using ssh",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "ssh -i ~/.ssh/lampkey.pem ec2-user@",
+                        {
+                            "Fn::GetAtt": [
+                                "webserver",
+                                "PublicDnsName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        },
+        "WebUrl": {
+            "Description": "The URL of instance",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http:\\",
+                        {
+                            "Fn::GetAtt": [
+                                "webserver",
+                                "PublicDnsName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    },
+    "Parameters": {
+        "KeyName": {
+            "Description": "allow ssh key we created",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "lampsg": {
+            "Properties": {
+                "GroupDescription": "allow access through port 80 and 22 to the webserver",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "22",
+                        "IpProtocol": "tcp",
+                        "ToPort": "22"
+                    },
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    }
+                ]
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "webserver": {
+            "Properties": {
+                "ImageId": "ami-b70554c8",
+                "InstanceType": "t2.micro",
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "lampsg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "\n",
+                            [
+                                "#!/bin/bash",
+                                "sudo yum -y install httpd",
+                                "sudo echo '<html><body><h1>Welcome to Devops On AWS</h1></body></html>' > /var/www/html/test.html",
+                                "sudo systemctl start httpd",
+                                "sudo systemctl enable http"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::EC2::Instance"
+        }
+    }
+}
